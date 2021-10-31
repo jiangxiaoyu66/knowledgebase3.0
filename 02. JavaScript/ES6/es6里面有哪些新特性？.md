@@ -12,6 +12,8 @@
 
 7. 对象的扩展
 
+   proxy和Reflect
+
    （解构，延展操作符，Object.values(), Object.entries()，`Object.fromEntries()`，Object.getOwnPropertyDescriptors()）
 
 8. 类，箭头函数
