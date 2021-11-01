@@ -292,3 +292,606 @@ import { Switch, Route} from 'react-router-dom'
 </Switch>
 ```
 
+
+
+
+
+
+
+# 环境问题
+
+因为等一下要用到h5新增的**pushState()** 方法，因为这玩(diao)意(mao)太矫情了，不支持在本地的**file协议**运行，不然就会报以下错误
+
+
+
+![img](图片/170e383111b1d713tplv-t2oaga2asx-watermark.awebp)
+
+
+
+只可以在**http(s)协议** 运行，这个坑本渣也是踩了很久，踩怀疑自己的性别。
+
+既然用**file协议** 不行那就只能用**webpack**搭个简陋坏境了，你也可以用阿帕奇，tomcat...啊狗啊猫之类的东西代理。
+
+本渣用的是**webpack**环境，也方便等下讲解**react-router-dom**的两个路由的原理。环境的配置，我简单的贴一下，这里不讲。如果你对**webpack**有兴趣,可以看看本渣的[这篇文章](https://juejin.cn/post/1#heading-8),写得虽然不是很好，但足够入门。
+
+```
+npm i webpack webpack-cli babel-loader @babel-core @babel/preset-env html-webpack-plugin webpack-dev-server -D
+复制代码
+```
+
+**webpack.config.js**
+
+```
+const path = require('path')
+
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+
+module.exports = {
+
+    entry:path.resolve(__dirname,'./index.js'),
+
+    output:{
+
+        filename:'[name].[hash:6].js',
+
+        path:path.resolve(__dirname,'../dist')
+
+    },
+
+    module:{
+
+        rules:[
+            {
+                test:/\.js$/,
+
+                exclude:/node_module/,
+
+                use:[
+                    {
+                        loader:'babel-loader',
+                        options:{
+                            presets:['@babel/preset-env']
+                        }
+                    }
+                ]
+            }
+        ]
+
+    },
+
+    plugins:[
+        new HtmlWebpackPlugin({
+            template:path.resolve(__dirname,'./public/index.html'),
+            filename:'index.html'
+        })
+    ]
+
+}
+复制代码
+```
+
+**package.json的script添加一条命令**
+
+```
+    "dev":"webpack-dev-server --config ./src/webpack.config.js --open"
+复制代码
+```
+
+**项目目录**
+
+
+
+![img](图片/170e3a28404815ddtplv-t2oaga2asx-watermark.awebp)
+
+
+
+**运行**
+
+```
+npm run dev
+复制代码
+```
+
+现在所有东西都准备好了，我们可以进入主题了。
+
+# 原生js实现hashRouter
+
+**html**
+
+```
+<ul>
+    <li><a href='#/home'>home</a></li>
+    <li><a href='#/about'>about</a></li>
+    <div id="routeView"></div>
+</ul>
+复制代码
+```
+
+**js**
+
+```
+window.addEventListener('DOMContentLoaded', onLoad)
+
+window.addEventListener('hashchange', changeView)
+
+let routeView = ''
+
+function onLoad() {
+
+    routeView = document.getElementById('routeView')
+
+    changeView()
+
+}
+
+function changeView() {
+    switch (location.hash) {
+        case '#/home':
+            routeView.innerHTML = 'home'
+            break;
+        case '#/about':
+            routeView.innerHTML = 'about'
+            break;
+    }
+
+}
+
+复制代码
+```
+
+**原生js实现hashRouter主要是监听它的hashchange事件的变化，然后拿到对应的location.hash更新对应的视图**
+
+# 原生js实现historyRouter
+
+**html**
+
+```
+<ul>
+    <li><a href='/home'>home</a></li>
+    <li><a href='/about'>about</a></li>
+    <div id="routeView"></div>
+</ul>
+
+复制代码
+```
+
+**historyRoute**
+
+```
+window.addEventListener('DOMContentLoaded', onLoad)
+
+window.addEventListener('popstate', changeView)
+
+let routeView = ''
+
+function onLoad() {
+
+    routeView = document.getElementById('routeView')
+
+    changeView()
+
+    let event = document.getElementsByTagName('ul')[0]
+    
+    event.addEventListener('click', (e) => {
+
+        if(e.target.nodeName === 'A'){
+            e.preventDefault()
+
+            history.pushState(null, "", e.target.getAttribute('href'))
+    
+            changeView()
+        }
+
+    })
+}
+
+function changeView() {
+    switch (location.pathname) {
+        case '/home':
+            routeView.innerHTML = 'home'
+            break;
+        case '/about':
+            routeView.innerHTML = 'about'
+            break;
+    }
+
+}
+复制代码
+```
+
+**能够实现history路由跳转不刷新页面得益与H5提供的pushState(),replaceState()等方法，这些方法都是也可以改变路由状态（路径），但不作页面跳转，我们可以通过location.pathname来显示对应的视图**
+
+# react-router-dom
+
+react-router-dom是react的路由，它帮助我们在项目中实现单页面应用，它提供给我们两种路由一种基于hash段实现的**HashRouter**，一种基于H5Api实现的**BrowserRouter**。
+
+下面我们来简单用一下。
+
+如果你在用本渣以上提供给你的环境，还要配置一下，下面👇这些东西，如果不是，请忽略。
+
+```
+npm i react react-dom react-router-dom @babel/preset-react -D
+复制代码
+```
+
+**webpack.config.js,在js的options配置加一个preset**
+
+
+
+![img](图片/170e3bf67bb89fb2tplv-t2oaga2asx-watermark.awebp)
+
+
+
+将**index.js**改成这样。
+
+```
+import React from 'react'
+
+import ReactDom from 'react-dom'
+
+import { BrowserRouter, Route, Link } from 'react-router-dom'
+
+function App() {
+
+    return (
+
+        <BrowserRouter>
+            <Link to='/home'>home</Link>
+            <Link to='/about'>about</Link>
+            <Route path='/home' render={()=><div>home</div>}></Route>
+            <Route path='/about' render={()=><div>about</div>}></Route>
+        </BrowserRouter>
+
+    )
+}
+
+ReactDom.render(<App></App>,document.getElementById('root'))
+复制代码
+```
+
+**public/index.html**
+
+```
+<div id="root"></div>
+
+复制代码
+```
+
+平时我么只知道去使用它们，但却很少去考虑它是怎么做到，所以导致我们一被问到，就会懵逼；今日如果你看完这篇文章，本渣promiss你不再只会用react-router，不再是它骑在你身上，而是你可以对它为所欲为。
+
+# react-router-dom的BrowserRouter实现
+
+首先我们在index.js新建一个BrowserRouter.js文件，我们来实现自己BrowserRouter。 既然要实现BrowserRouter，那这个文件就得有三个组件BrowserRouter,Route,Link。
+
+
+
+![img](图片/170e3d83aed89e87tplv-t2oaga2asx-watermark.awebp)
+
+
+
+好，现在我们把它壳定好来，让我们来一个一个的弄*它们😂
+
+**BrowserRouter组件**
+
+> BrowserRouter组件主要做的是将当前的路径往下传，并监听popstate事件,所以我们要用Consumer, Provider跨组件通信，如果你不懂的话，可以看看本渣[这遍文章，本渣例举了react所有的通信方式](https://juejin.cn/post/6844903972415750157)
+
+```
+const { Consumer, Provider } = React.createContext()
+
+export class BrowserRouter extends React.Component {
+
+    constructor(props) {
+        super(props)
+        this.state = {
+            currentPath: this.getParams.bind(this)(window.location.pathname)
+        }
+    }
+
+
+    onChangeView() {
+        const currentPath = this.getParams.bind(this)(window.location.pathname)
+        this.setState({ currentPath });
+    };
+
+    getParams(url) {
+        return url
+    }
+
+
+    componentDidMount() {
+        window.addEventListener("popstate", this.onChangeView.bind(this));
+    }
+
+    componentWillUnmount() {
+        window.removeEventListener("popstate", this.onChangeView.bind(this));
+    }
+
+    render() {
+        return (
+            <Provider value={{ currentPath: this.state.currentPath, onChangeView: this.onChangeView.bind(this) }}>
+                 <div>
+                    {
+                        React.Children.map(this.props.children, function (child) {
+
+                            return child
+
+                        })
+                    }
+                </div>
+            </Provider>
+        );
+    }
+}
+
+复制代码
+```
+
+**Rouer组件的实现**
+
+> Router组件主要做的是通过BrowserRouter传过来的当前值，与Route通过props传进来的path对比，然后决定是否执行props传进来的render函数
+
+```
+export class Route extends React.Component {
+
+    constructor(props) {
+        super(props)
+    }
+
+    render() {
+        let { path, render } = this.props
+        return (
+            <Consumer>
+                {({ currentPath }) => currentPath === path && render()}
+            </Consumer>
+        )
+    }
+}
+
+复制代码
+```
+
+**Link组件的实现**
+
+> Link组件主要做的是，拿到prop,传进来的to,通过PushState()改变路由状态，然后拿到BrowserRouter传过来的onChangeView手动刷新视图
+
+```
+export class Link extends React.Component {
+
+    constructor(props){
+        super(props)
+    }
+
+    render() {
+        let { to, ...props } = this.props
+        return (
+            <Consumer>
+                {({ onChangeView }) => (
+                    <a
+                        {...props}
+                        onClick={e => {
+                            e.preventDefault();
+                            window.history.pushState(null, "", to);
+                            onChangeView();
+                        }}
+                    />
+                )}
+            </Consumer>
+        )
+
+    }
+
+}
+复制代码
+```
+
+完整代码
+
+```
+import React from 'react'
+
+const { Consumer, Provider } = React.createContext()
+
+export class BrowserRouter extends React.Component {
+
+    constructor(props) {
+        super(props)
+        this.state = {
+            currentPath: this.getParams.bind(this)(window.location.pathname)
+        }
+    }
+
+
+    onChangeView() {
+        const currentPath = this.getParams.bind(this)(window.location.pathname)
+        this.setState({ currentPath });
+    };
+
+    getParams(url) {
+        return url
+    }
+
+
+    componentDidMount() {
+        window.addEventListener("popstate", this.onChangeView.bind(this));
+    }
+
+    componentWillUnmount() {
+        window.removeEventListener("popstate", this.onChangeView.bind(this));
+    }
+
+    render() {
+        return (
+            <Provider value={{ currentPath: this.state.currentPath, onChangeView: this.onChangeView.bind(this) }}>
+                <div>
+                    {
+                        React.Children.map(this.props.children, function (child) {
+
+                            return child
+
+                        })
+                    }
+                </div>
+            </Provider>
+        );
+    }
+}
+
+export class Route extends React.Component {
+
+    constructor(props) {
+        super(props)
+    }
+
+    render() {
+        let { path, render } = this.props
+        return (
+            <Consumer>
+                {({ currentPath }) => currentPath === path && render()}
+            </Consumer>
+        )
+    }
+}
+
+export class Link extends React.Component {
+
+    constructor(props){
+        super(props)
+    }
+
+    render() {
+        let { to, ...props } = this.props
+        return (
+            <Consumer>
+                {({ onChangeView }) => (
+                    <a
+                        {...props}
+                        onClick={e => {
+                            e.preventDefault();
+                            window.history.pushState(null, "", to);
+                            onChangeView();
+                        }}
+                    />
+                )}
+            </Consumer>
+        )
+
+    }
+
+}
+复制代码
+```
+
+**使用**
+
+```
+把刚才在index.js使用的react-router-dom换成这个文件路径就OK。
+复制代码
+```
+
+# react-router-dom的hashRouter的实现
+
+> hashRouter就不一个一个组件的说了，跟BrowserRouter大同小异,直接贴完整代码了
+
+```
+import React from 'react'
+
+let { Provider, Consumer } = React.createContext()
+
+export class HashRouter extends React.Component {
+    constructor(props) {
+        super(props)
+        this.state = {
+            currentPath: this.getCurrentPath.bind(this)(window.location.href)
+        }
+    }
+
+    componentDidMount() {
+        window.addEventListener('hashchange', this.onChangeView.bind(this))
+    }
+
+    componentWillUnmount() {
+        window.removeEventListener('hashchange')
+    }
+
+    onChangeView(e) {
+        let currentPath = this.getCurrentPath.bind(this)(window.location.href)
+        this.setState({ currentPath })
+    }
+
+    getCurrentPath(url) {
+        
+        let hashRoute = url.split('#')
+        
+        return hashRoute[1]
+    }
+
+    render() {
+
+        return (
+
+            <Provider value={{ currentPath: this.state.currentPath }}>
+                <div>
+                    {
+                        React.Children.map(this.props.children, function (child) {
+
+                            return child
+
+                        })
+                    }
+                </div>
+            </Provider>
+
+        )
+
+    }
+
+
+}
+
+export class Route extends React.Component {
+
+    constructor(props) {
+        super(props)
+    }
+
+    render() {
+
+        let { path, render } = this.props
+
+        return (
+            <Consumer>
+                {
+                    (value) => {
+                        console.log(value)
+                        return (
+                            value.currentPath === path && render()
+                        )
+                    }
+                }
+            </Consumer>
+        )
+
+    }
+
+}
+
+export class Link extends React.Component {
+
+    constructor(props) {
+        super(props)
+    }
+
+    render() {
+
+        let { to, ...props } = this.props
+
+        return <a href={'#' + to} {...props} />
+
+    }
+```
+
+
+作者：EasyMoment23
+链接：https://juejin.cn/post/6844904094772002823
+来源：稀土掘金
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。

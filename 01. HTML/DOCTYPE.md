@@ -46,3 +46,4 @@
 [**DOCTYPE**](https://github.com/WindrunnerMax/EveryDay/blob/master/HTML/DOCTYPE.md)
 
 [w3c-DTD](https://www.w3school.com.cn/dtd/dtd_intro.asp)
+
