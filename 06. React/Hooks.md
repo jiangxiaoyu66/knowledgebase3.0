@@ -1,5 +1,11 @@
 
 
+## 用reducer写一个redux
+
+
+
+
+
 ## class组件有什么缺点？
 
 1、代码编写麻烦，如要写constructor，要额外绑定this，setState语法糖写法冗余。class学习成本高
